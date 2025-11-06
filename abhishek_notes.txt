@@ -1,0 +1,40 @@
+What to run / how to check the app (quick checklist)
+
+Ensure dependencies installed: flask, sqlalchemy, requests, beautifulsoup4, pytest (for later).
+pip install flask sqlalchemy requests beautifulsoup4 pytest
+
+Start the app:
+python run.py
+
+Create some accounts (curl / Thunder Client / Postman):
+POST http://127.0.0.1:5000/api/v1/accounts with JSON {"name":"Alice","number":"A001","balance":100}
+create several accounts so batch behavior is visible.
+
+Run the batch calc from a Python REPL (example — run from project root):
+python - <<'PY'
+from app import create_app
+app = create_app()
+sf = app.session_factory
+from app.batch_calc import total_balance_in_batches_threaded, total_balance_in_batches_async
+print(total_balance_in_batches_threaded(sf, batch_size=2))
+import asyncio
+print(asyncio.run(total_balance_in_batches_async(sf, batch_size=2)))
+PY
+
+Optionally call fetch_interest_rates to verify scraper:
+python - <<'PY'
+from app.scraper import fetch_interest_rates
+print(fetch_interest_rates()) # returns fallback
+print(fetch_interest_rates("https://example.com"))
+PY
+
+What to check after completing app folder (before writing client/tests)
+
+API endpoints respond (POST/GET/PUT/DELETE) and persist in db.sqlite.
+Logs are being written (employee_app_logs.log).
+batch_calc functions return correct totals for various batch_size.
+scraper returns fallback or parsed rates without crashing.
+I can next:
+
+add an API endpoint that exposes batch totals (if you want the feature over HTTP), or
+scaffold pytest tests for CRUD and batch_calc. Which should I do?

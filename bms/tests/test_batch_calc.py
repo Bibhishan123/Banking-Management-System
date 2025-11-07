@@ -7,7 +7,6 @@ from app import batch_calc
 
 
 def setup_accounts(session_factory, count=10):
-    # disable email side-effects
     crud._dispatch_create_email = lambda account: None
     sess = session_factory()
     try:
@@ -20,8 +19,7 @@ def setup_accounts(session_factory, count=10):
 def test_total_balance_threaded():
     app = create_app({"SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
     sf = app.session_factory
-    setup_accounts(sf, count=7)  # balances 10,20,...,70 => total 280
-
+    setup_accounts(sf, count=7)  
     res = batch_calc.total_balance_in_batches_threaded(sf, batch_size=3, max_workers=3)
     assert isinstance(res, dict)
     assert abs(res["total"] - 280.0) < 1e-6
@@ -32,10 +30,11 @@ def test_total_balance_threaded():
 def test_total_balance_async():
     app = create_app({"SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
     sf = app.session_factory
-    setup_accounts(sf, count=5)  # 10+20+30+40+50 = 150
+    setup_accounts(sf, count=5)  
 
     res = asyncio.run(batch_calc.total_balance_in_batches_async(sf, batch_size=2, concurrency=2))
     assert isinstance(res, dict)
     assert abs(res["total"] - 150.0) < 1e-6
     assert res["batches"] == 3
     assert len(res["batch_sums"]) == 3
+    

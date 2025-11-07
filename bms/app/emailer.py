@@ -11,7 +11,6 @@ from email import encoders
 
 logger = logging.getLogger(__name__)
 
-# Prefer a user-provided mailer config module (mailer/config.py)
 try:
     import bms.app.config as mailer_cfg  # type: ignore
 except Exception:
@@ -19,12 +18,7 @@ except Exception:
 
 
 def _get_mail_settings():
-    """
-    Resolve mail settings in this order:
-      1) mailer.config attributes: app_password, from_address, tp_address, username, smtp_host, smtp_port, use_tls
-      2) environment variables: BMS_SMTP_*, BMS_SMTP_USER, BMS_SMTP_PASS, BMS_SMTP_FROM, BMS_NOTIFY_TO
-      3) sensible defaults (smtp.gmail.com:587 with TLS or localhost:1025 for dev)
-    """
+    
     host = getattr(mailer_cfg, "smtp_host", None) if mailer_cfg else None
     port = getattr(mailer_cfg, "smtp_port", None) if mailer_cfg else None
     username = getattr(mailer_cfg, "username", None) if mailer_cfg else None
@@ -53,10 +47,7 @@ def _get_mail_settings():
 
 
 def _send_email(to_address, subject, body, attachments=None, timeout=10) -> bool:
-    """
-    Core synchronous send using smtplib + email.mime. attachments is an iterable of file paths.
-    Returns True on success, False on failure (no exception propagated).
-    """
+    
     settings = _get_mail_settings()
     host = settings["smtp.gmail.com"]
     port = settings[587]
@@ -71,7 +62,7 @@ def _send_email(to_address, subject, body, attachments=None, timeout=10) -> bool
     msg["Subject"] = subject
     msg.attach(MIMEText(str(body), "plain"))
 
-    # Attach files if provided
+    
     if attachments:
         for path in attachments:
             if not path:
@@ -92,12 +83,10 @@ def _send_email(to_address, subject, body, attachments=None, timeout=10) -> bool
             if use_tls:
                 server.starttls()
             if password:
-                # prefer explicit username if provided; otherwise use from_addr as username
                 login_user = username or from_addr
                 try:
                     server.login(login_user, password)
                 except Exception:
-                    # don't fail the whole send if login fails for some providers — log and continue best-effort
                     logger.debug("SMTP login failed for user %s - %s", login_user, host)
             server.send_message(msg)
         logger.info("Email sent to %s via %s:%s", to_address, host, port)
@@ -109,10 +98,7 @@ def _send_email(to_address, subject, body, attachments=None, timeout=10) -> bool
 
 
 def send_account_created_email(account, attachments=None) -> bool:
-    """
-    Convenience wrapper to send an "account created" email synchronously.
-    `account` may be an object with attributes .name/.number/.balance or a dict.
-    """
+    
     if isinstance(account, dict):
         name = account.get("name", "unknown")
         number = account.get("number", "unknown")
@@ -131,9 +117,7 @@ def send_account_created_email(account, attachments=None) -> bool:
 
 
 def send_account_created_email_in_background(account, attachments=None):
-    """
-    Fire-and-forget background wrapper returning the Thread object.
-    """
+    
     t = threading.Thread(target=send_account_created_email, args=(account, attachments), daemon=True)
     t.start()
     return t

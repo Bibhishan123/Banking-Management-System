@@ -1,6 +1,5 @@
 import logging
 from flask import jsonify
-#from werkzeug.exceptions import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +26,8 @@ class DatabaseError(BMSException):
 def register_exception_handlers(app):
     @app.errorhandler(Exception)
     def handle_all_errors(err):
-        # If it's one of our simple exceptions, return its status and message
         if isinstance(err, BMSException):
             return jsonify({"error": err.__class__.__name__, "message": str(err)}), err.status_code
 
-        # Otherwise log and return a generic 500 response
         logger.exception("Unhandled exception: %s", err)
         return jsonify({"error": "InternalServerError", "message": "An internal error occurred"}), 500

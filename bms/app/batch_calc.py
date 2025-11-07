@@ -35,15 +35,11 @@ def _sum_accounts(accounts: List[models.Account]) -> Decimal:
 def total_balance_in_batches_threaded(session_factory: Callable[[], object],
                                         batch_size: int = 10,  
                                         max_workers: int = 4) -> Dict:
-    """
-    Read accounts in pages of `batch_size` and compute sums using a ThreadPoolExecutor.
-    Returns dict with 'batch_sums' (list of floats), 'total' (float), 'batches' (int).
-    """
+    
     offset = 0
     batch_sums: List[Decimal] = []
     batches: List[List[models.Account]] = []
 
-    # collect batches first (small memory footprint: holds only references to ORM objects per batch)
     while True:
         batch = _fetch_batch(session_factory, offset, batch_size)
         if not batch:
@@ -66,6 +62,7 @@ def total_balance_in_batches_threaded(session_factory: Callable[[], object],
                 logger.exception("Error computing batch sum")
 
     total = sum(batch_sums, Decimal("0"))
+    
     # convert to floats for JSON-friendly output
     return {
         "batch_sums": [float(x) for x in batch_sums],
@@ -77,10 +74,7 @@ def total_balance_in_batches_threaded(session_factory: Callable[[], object],
 async def total_balance_in_batches_async(session_factory: Callable[[], object],
                                          batch_size: int = 10,
                                          concurrency: int = 4) -> Dict:
-    """
-    Async implementation that uses threads for DB-bound work via asyncio.to_thread.
-    Returns same structure as threaded version.
-    """
+    
     loop = asyncio.get_running_loop()
     offset = 0
     batch_sums: List[Decimal] = []

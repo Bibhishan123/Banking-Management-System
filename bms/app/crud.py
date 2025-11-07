@@ -28,7 +28,7 @@ except Exception:
 
 
 def _dispatch_create_email(account: models.Account) -> None:
-    """Dispatch account-created notification (best-effort)."""
+    
     try:
         if _EMAIL_BG_AVAILABLE:
             # emailer is expected to handle its own errors/logging
@@ -42,14 +42,7 @@ def _dispatch_create_email(account: models.Account) -> None:
 
 
 def create_account(db: Session, name: str, number: str, balance: Decimal = Decimal("0.0")) -> models.Account:
-    """
-    Create and persist a new Account.
-
-    - Validates inputs.
-    - Ensures unique account number.
-    - Commits transaction and returns refreshed instance.
-    - Triggers best-effort email notification in background.
-    """
+   
     if not isinstance(name, str) or not name.strip():
         raise ValueError("name must be a non-empty string")
     if not isinstance(number, str) or not number.strip():
@@ -76,11 +69,11 @@ def create_account(db: Session, name: str, number: str, balance: Decimal = Decim
         logger.exception("Database error while creating account: %s", exc)
         raise DatabaseError("Failed to create account") from exc
 
-    # send notification (best-effort, non-blocking)
+    
     try:
         _dispatch_create_email(account)
     except Exception:
-        # already logged in helper; do not raise
+        
         pass
 
     return account
@@ -136,9 +129,7 @@ def update_account(db: Session, account_id: int, changes: Dict[str, Any]) -> mod
     if invalid:
         raise ValueError(f"Invalid update keys: {invalid}")
 
-    account = get_account_by_id(db, account_id)  # may raise NotFoundError
-
-    # handle number change
+    account = get_account_by_id(db, account_id)  
     if "number" in changes:
         new_number = str(changes["number"]).strip()
         if not new_number:

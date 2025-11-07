@@ -1,6 +1,4 @@
-"""
-The CLI talks to http://127.0.0.1:5000/api/v1 by default. Use --base to override.
-"""
+
 import json
 import sys
 from typing import Any, Dict, Optional

@@ -4,7 +4,6 @@ from . import crud
 accounts_bp = Blueprint("accounts", __name__)
 
 def _get_session():
-    # session factory placed on app in create_app (scoped_session)
     sf = current_app.session_factory
     return sf()
 

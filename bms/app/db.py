@@ -8,18 +8,10 @@ _SessionFactory = None
 
 
 def init_engine(database_uri: str, echo: bool = False):
-    """
-    Initialize SQLAlchemy engine and a scoped_session factory.
-
-    - For sqlite in-memory URIs, create a fresh engine that uses StaticPool and
-      check_same_thread=False so the single in-memory DB is sharable across
-      threads (useful for threaded/async tests).
-    - For other URIs, reuse a single engine/session factory.
-    """
+    
     global _engine, _SessionFactory
 
     if database_uri.startswith("sqlite:///:memory:"):
-        # create a fresh engine for each call (tests call create_app repeatedly)
         engine = create_engine(
             database_uri,
             echo=echo,
@@ -31,7 +23,6 @@ def init_engine(database_uri: str, echo: bool = False):
         _engine = engine
         return _engine
 
-    # non-memory DB: initialize once
     if _engine is None:
         _engine = create_engine(database_uri, echo=echo, future=True)
         _SessionFactory = scoped_session(sessionmaker(bind=_engine, autoflush=False, autocommit=False))

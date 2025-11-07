@@ -13,15 +13,12 @@ from .exceptions import NotFoundError, DuplicateError, DatabaseError
 logger = logging.getLogger(__name__)
 
 
-# Optional emailer helpers (best-effort, non-fatal)
 try:
-    # Prefer a background helper if the project provides one
     from .emailer import send_account_created_email_in_background as _send_email_bg
     _EMAIL_BG_AVAILABLE = True
 except Exception:
     _EMAIL_BG_AVAILABLE = False
     try:
-        # Fallback to synchronous sender if present
         from .emailer import send_account_created_email as _send_email_sync  # type: ignore
     except Exception:
         _send_email_sync = None
@@ -31,10 +28,8 @@ def _dispatch_create_email(account: models.Account) -> None:
     
     try:
         if _EMAIL_BG_AVAILABLE:
-            # emailer is expected to handle its own errors/logging
             _send_email_bg(account)
         elif _send_email_sync:
-            # run sync sender in a daemon thread so CRUD is non-blocking
             t = threading.Thread(target=_send_email_sync, args=(account,), daemon=True)
             t.start()
     except Exception:
@@ -98,10 +93,7 @@ def get_account_by_number(db: Session, number: str) -> models.Account:
 
 
 def list_accounts(db: Session, limit: int = 100, offset: int = 0) -> List[models.Account]:
-    """
-    Return a paginated list of accounts ordered by id ascending.
-    Enforces reasonable bounds on limit.
-    """
+   
     try:
         limit = max(1, min(1000, int(limit)))
         offset = max(0, int(offset))
@@ -115,12 +107,7 @@ def list_accounts(db: Session, limit: int = 100, offset: int = 0) -> List[models
 
 
 def update_account(db: Session, account_id: int, changes: Dict[str, Any]) -> models.Account:
-    """
-    Update allowed fields of an account. Allowed keys: name, number, balance.
-
-    - Ensures account number uniqueness if changed.
-    - Commits and returns refreshed Account.
-    """
+    
     if not changes:
         raise ValueError("No changes provided")
 

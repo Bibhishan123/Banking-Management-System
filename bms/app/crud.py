@@ -25,7 +25,16 @@ except Exception:
 
 
 def _dispatch_create_email(account: models.Account) -> None:
-    
+    """
+    Dispatch an account-created notification.
+
+    Prefer an asynchronous/background sender if available; otherwise launch
+    a short-lived daemon thread to call a synchronous sender. All exceptions
+    are caught and logged so email failures do not affect database operations.
+
+    Args:
+        account: The Account instance that was created.
+    """
     try:
         if _EMAIL_BG_AVAILABLE:
             _send_email_bg(account)
@@ -37,7 +46,28 @@ def _dispatch_create_email(account: models.Account) -> None:
 
 
 def create_account(db: Session, name: str, number: str, balance: Decimal = Decimal("0.0")) -> models.Account:
-   
+    """
+    Create and persist a new Account.
+
+    Validates inputs (non-empty name and number, numeric balance), enforces
+    unique account number at the application level, commits the new row and
+    refreshes the instance. Attempts to dispatch an account-created email but
+    does not fail the operation if email sending fails.
+
+    Args:
+        db: SQLAlchemy Session to use for the operation.
+        name: Account holder name (non-empty string).
+        number: Account unique number (non-empty string).
+        balance: Initial balance (Decimal or convertible to Decimal).
+
+    Returns:
+        The created models.Account instance.
+
+    Raises:
+        ValueError: On invalid input types/values.
+        DuplicateError: If an account with the given number already exists.
+        DatabaseError: On SQLAlchemy commit/DB failure.
+    """
     if not isinstance(name, str) or not name.strip():
         raise ValueError("name must be a non-empty string")
     if not isinstance(number, str) or not number.strip():
@@ -64,18 +94,28 @@ def create_account(db: Session, name: str, number: str, balance: Decimal = Decim
         logger.exception("Database error while creating account: %s", exc)
         raise DatabaseError("Failed to create account") from exc
 
-    
     try:
         _dispatch_create_email(account)
     except Exception:
-        
         pass
 
     return account
 
 
 def get_account_by_id(db: Session, account_id: int) -> models.Account:
-    """Return Account by primary key or raise NotFoundError."""
+    """
+    Return an Account by primary key.
+
+    Args:
+        db: SQLAlchemy Session to use.
+        account_id: Primary key of the account.
+
+    Returns:
+        The matching models.Account.
+
+    Raises:
+        NotFoundError: If no account exists with the given id.
+    """
     account = db.get(models.Account, account_id)
     if account is None:
         logger.debug("Account not found by id=%s", account_id)
@@ -84,7 +124,19 @@ def get_account_by_id(db: Session, account_id: int) -> models.Account:
 
 
 def get_account_by_number(db: Session, number: str) -> models.Account:
-    """Return Account by unique account number or raise NotFoundError."""
+    """
+    Return an Account by its unique account number.
+
+    Args:
+        db: SQLAlchemy Session to use.
+        number: Account number to look up.
+
+    Returns:
+        The matching models.Account.
+
+    Raises:
+        NotFoundError: If no account exists with the given number.
+    """
     account = db.execute(select(models.Account).where(models.Account.number == number.strip())).scalars().first()
     if account is None:
         logger.debug("Account not found by number=%s", number)
@@ -93,7 +145,20 @@ def get_account_by_number(db: Session, number: str) -> models.Account:
 
 
 def list_accounts(db: Session, limit: int = 100, offset: int = 0) -> List[models.Account]:
-   
+    """
+    Return a paginated list of accounts ordered by id.
+
+    Args:
+        db: SQLAlchemy Session to use.
+        limit: Maximum number of accounts to return (clamped to 1..1000).
+        offset: Number of rows to skip (must be >= 0).
+
+    Returns:
+        List of models.Account instances.
+
+    Raises:
+        ValueError: If limit or offset are not integers.
+    """
     try:
         limit = max(1, min(1000, int(limit)))
         offset = max(0, int(offset))
@@ -107,7 +172,27 @@ def list_accounts(db: Session, limit: int = 100, offset: int = 0) -> List[models
 
 
 def update_account(db: Session, account_id: int, changes: Dict[str, Any]) -> models.Account:
-    
+    """
+    Apply validated changes to an existing Account and persist them.
+
+    Allowed change keys: "name", "number", "balance". Validates non-empty
+    strings for name/number and converts balance to Decimal. Enforces unique
+    account number if changed.
+
+    Args:
+        db: SQLAlchemy Session to use.
+        account_id: Primary key of the account to update.
+        changes: Dict of fields to update.
+
+    Returns:
+        The updated models.Account instance.
+
+    Raises:
+        ValueError: If changes is empty or contains invalid keys/values.
+        NotFoundError: If the account does not exist.
+        DuplicateError: If the new account number is already in use.
+        DatabaseError: On SQLAlchemy commit/DB failure.
+    """
     if not changes:
         raise ValueError("No changes provided")
 
@@ -116,7 +201,7 @@ def update_account(db: Session, account_id: int, changes: Dict[str, Any]) -> mod
     if invalid:
         raise ValueError(f"Invalid update keys: {invalid}")
 
-    account = get_account_by_id(db, account_id)  
+    account = get_account_by_id(db, account_id)
     if "number" in changes:
         new_number = str(changes["number"]).strip()
         if not new_number:
@@ -153,7 +238,17 @@ def update_account(db: Session, account_id: int, changes: Dict[str, Any]) -> mod
 
 
 def delete_account(db: Session, account_id: int) -> None:
-    """Delete an account by id. Raises NotFoundError if missing."""
+    """
+    Delete an account by id.
+
+    Args:
+        db: SQLAlchemy Session to use.
+        account_id: Primary key of the account to delete.
+
+    Raises:
+        NotFoundError: If no account exists with the given id.
+        DatabaseError: On SQLAlchemy commit/DB failure.
+    """
     account = get_account_by_id(db, account_id)
     try:
         db.delete(account)

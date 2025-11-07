@@ -27,7 +27,6 @@ def _fetch_batch(session_factory: Callable[[], object], offset: int, limit: int)
 def _sum_accounts(accounts: List[models.Account]) -> Decimal:
     total = Decimal("0")
     for a in accounts:
-        # account.balance is a Decimal-compatible Numeric type
         total += Decimal(a.balance or 0)
     return total
 
@@ -63,7 +62,6 @@ def total_balance_in_batches_threaded(session_factory: Callable[[], object],
 
     total = sum(batch_sums, Decimal("0"))
     
-    # convert to floats for JSON-friendly output
     return {
         "batch_sums": [float(x) for x in batch_sums],
         "total": float(total),
@@ -82,14 +80,13 @@ async def total_balance_in_batches_async(session_factory: Callable[[], object],
     tasks = []
 
     async def _fetch_and_sum(off: int):
-        async with sem:  # limit concurrent DB fetch+sum tasks
+        async with sem:  
             accounts = await loop.run_in_executor(None, _fetch_batch, session_factory, off, batch_size)
             if not accounts:
                 return None
             s = await loop.run_in_executor(None, _sum_accounts, accounts)
             return s
 
-    # schedule fetches in a sliding-window fashion
     while True:
         accounts = await loop.run_in_executor(None, _fetch_batch, session_factory, offset, batch_size)
         if not accounts:

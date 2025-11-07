@@ -8,10 +8,7 @@ from .routes import accounts_bp
 
 
 def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
-    """
-    Application factory: init logging, database engine/session factory,
-    register blueprints and centralized exception handlers.
-    """
+    
     cfg = Config()
     if config:
         cfg.from_mapping(config)
@@ -21,7 +18,6 @@ def create_app(config: Optional[Dict[str, Any]] = None) -> Flask:
     engine = init_engine(cfg.SQLALCHEMY_DATABASE_URI, echo=cfg.SQLALCHEMY_ECHO)
 
     from . import models
-    # create tables in dev if they do not exist
     models.Base.metadata.create_all(bind=engine)
 
     app = Flask(__name__)

@@ -1,23 +1,8 @@
-import os
-from dataclasses import dataclass, asdict
-from typing import Dict, Any
-
-@dataclass
-class Config:
-    SQLALCHEMY_DATABASE_URI: str = os.getenv("BMS_DATABASE_URI", "sqlite:///db.sqlite")
-    SQLALCHEMY_ECHO: bool = False
-    DEBUG: bool = os.getenv("BMS_DEBUG", "0") == "1"
-    BATCH_SIZE: int = int(os.getenv("BMS_BATCH_SIZE", "10"))
-    SMTP_HOST: str = os.getenv("BMS_SMTP_HOST", "localhost")
-    SMTP_PORT: int = int(os.getenv("BMS_SMTP_PORT", "1025"))
-    SMTP_USER: str | None = os.getenv("BMS_SMTP_USER", None)
-    SMTP_PASS: str | None = os.getenv("BMS_SMTP_PASS", None)
-    LOG_JSON: bool = os.getenv("BMS_LOG_JSON", "0") == "1"
-
-    def as_dict(self) -> Dict[str, Any]:
-        return asdict(self)
-
-    def from_mapping(self, mapping: Dict[str, Any]) -> None:
-        for k, v in mapping.items():
-            if hasattr(self, k):
-                setattr(self, k, v)
+# dev/test values — replace for production (use app password for Gmail)
+smtp_host = "smtp.gmail.com"      # or "smtp.gmail.com"
+smtp_port = 587             # 587 for Gmail w/TLS
+username = None              # your SMTP username (or your email for Gmail)
+app_password = "dcoqchnbfjpcddvt"          # SMTP app password (or set via env BMS_SMTP_PASS)
+from_address = "birajdarbibhishan5@gmail.com"
+tp_address = "birajdarbibhishan1@gmail.com"
+use_tls = True              # True if using smtp.gmail.com:587

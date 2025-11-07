@@ -1,4 +1,4 @@
-# Banking Management System (BMS) — Simple README
+# Banking Management System (BMS)
 
 Minimal Flask + SQLAlchemy backend for managing accounts.
 
